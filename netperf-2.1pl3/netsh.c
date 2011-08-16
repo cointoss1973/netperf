@@ -9,10 +9,11 @@ char	netsh_id[]="\
 /****************************************************************/
 
 #include <sys/types.h>
-#ifndef WIN32
-#include <unistd.h>
+#if !defined(WIN32) && !defined(VXWORKS)
+#include <unistd.h>  /* VXW has this, but I don't think it's needed below */
 #include <sys/ipc.h>
-#endif /* WIN32 */
+#endif /* WIN32 || VXWORKS*/
+
 #include <fcntl.h>
 #include <errno.h>
 #include <signal.h>
@@ -271,6 +272,17 @@ set_defaults()
   remote_recv_align	= 8;	/* alignment for remote receives*/
   remote_send_align	= 8;	/* alignment for remote sends	*/
   
+  /* the corresponding offsets for the tests				*/
+  local_recv_offset = 0;
+  local_send_offset = 0;
+  remote_recv_offset = 0;
+  remote_send_offset = 0;
+
+  /* The formatting units for measurements */
+  libfmt = 'm';
+  /* The number of CPUs present */
+  shell_num_cpus=1;
+
 #ifdef INTERVALS
   /* rate controlling stuff */
   interval_usecs  = 0;

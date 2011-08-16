@@ -79,12 +79,40 @@ char	netperf_id[]="\
  /* routines can be found in the file netsh.c */
 
 
+#ifdef VXWORKS
+/* VxWorks uses a single address space for all tasks and dynamically loads
+ * object modules.  Hence, we don't want a main(), but instead a netperf()...
+ */
+int
+netperf(line)
+char* line;
+{
+    int	 argc;
+    char *argv[100];
+    extern int optind;
+
+    argv[0] = "netperf";
+    parseArgs (line, &argc, argv);
+    init_getopt();		/* klugey, but needed.  (We may call
+				   netperf()/getopt() multiple times before
+				   rebooting/reloading...  */
+
+    /* Because VxWorks tasks run in the same address space, we can't count on
+       the static variables being init-ed to 0 automatically... */
+    zero_static_vars();
+    /* Similarly, we should reset the posix timer variable, since we may not
+       be in the same task that initially created it. */
+    reset_alarm();
+
+#else  /* VXWORKS */
+
 int
 main(argc,argv)
 int	argc;
 char	*argv[];
 
 {
+#endif /* VXWORKS */
 
 #ifdef WIN32
 	WSADATA	wsa_data ;

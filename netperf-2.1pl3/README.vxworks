@@ -1,0 +1,63 @@
+These are some notes on using the VxWorks port of netperf 2.1pl3
+
+Caveats:
+
+I worked on this port because I needed some TCP throughput numbers
+from a VxWorks PowerPC board.  Therefore, I have focussed primarily on
+the TCP_STREAM test, and I have not really checked the code for the
+other tests.  Furthermore, I have only developed for a Motorola
+MVME2300 CPU board.  Presumably, VxWorks on other architectures would
+work similarly, but the makefile.vxworks will certainly have to be
+modified.  I worked with version 5.3.1 of Vxworks (aka Tornado 1.0.1),
+and I can't really speak for other versions.  Finally, I'm not really
+an "embedded systems" guy, I'm more of a "Unix/networking" guy, so
+there may very well be better ways in VxWorks that I'm not aware to do
+some of the things I needed.
+
+
+To get going:
+
+Edit the makefile.vxworks as appropriate for your architecture.  If
+you're working on PPC604, you shouldn't need to edit.
+
+The makefile should produce netperf.out and netserver.out.  I never
+needed to run both of these at one time, so I didn't bother splitting
+out the common object code.
+
+I worked around the argc/argv problem by adding code to netperf to
+take a single command string and chop it up into an argv array.  Thus,
+I used a script something like this to do my tests:
+
+	unld "netperf.out"
+	ld < netperf.out
+ 
+	netperf "-H 134.79.128.64 -- -m    32 -s 8192 -S 8192"
+	netperf "-H 134.79.128.64 -- -m    64 -s 8192 -S 8192"
+	netperf "-H 134.79.128.64 -- -m   128 -s 8192 -S 8192"
+	netperf "-H 134.79.128.64 -- -m   256 -s 8192 -S 8192"
+	...
+
+or:
+	ld < netserver.o
+	sp netserver, "-d -p 12865"
+
+
+Finally, I should mention that where traditional unix interfaces were
+lacking in VxWorks (e.g. alarm() or gettimeofday()), I tried to use
+the POSIX.1b interfaces, since I'm more familiar with those than any
+lower-level VxWorks stuff.  Therefore, you will need to compile your
+VxWorks kernel with things like INCLUDE_POSIX_TIMERS if you are
+missing the POSIX features.
+
+
+
+If you discover anything interesting with your benchmarks, I'd like to
+hear about it.  I've found a few weird things, which I've so far
+attributed to network driver problems.  It would be useful for me to
+compare notes with others, though.
+
+
+Tom Pavel
+
+Stanford Linear Accelerator Center
+pavel@slac.stanford.edu                 http://www.slac.stanford.edu/~pave
