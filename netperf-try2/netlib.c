@@ -93,7 +93,7 @@ char	netlib_id[]="\
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <hostLib.h>		/* for hostGetByName() */
-#include <sys/utsname.h>	/* currently empty file. */
+/*#include <sys/utsname.h>*/	/* currently empty file. */
 #include <version.h>		/* kluge with: <version.h> */
 
 #else /* WIN32 */
@@ -3238,6 +3238,8 @@ calibrate_remote_cpu()
   }	
 }
 
+
+#if 0 /* Tornado2.2.1 has sleep() function */
 #ifdef VXWORKS
 /* supply a sleep routine for VxWorks */
 int
@@ -3252,6 +3254,7 @@ unsigned secs;
     return 0;
 }
 #endif /* VXWORKS */
+#endif
 
 int
 msec_sleep( msecs )
