@@ -202,11 +202,13 @@ struct ring_elt {
 #define BADCH ('?')
 
 #ifndef NETLIB
-#ifdef WIN32
+
+#if defined(WIN32) || defined(VXWORKS)
 #ifndef _GETOPT_
 #define _GETOPT_
 
 int getopt(int argc, char **argv, char *optstring);
+void init_getopt();
 
 extern char *optarg;		/* returned arg to go with this option */
 extern int optind;		/* index to next argv element to process */
@@ -214,7 +216,14 @@ extern int opterr;		/* should error messages be printed? */
 extern int optopt;		/* */
 
 #endif /* _GETOPT_ */
+#endif /* WIN32 || VXWORKS*/
 
+#ifdef VXWORKS
+/* Used to turn a single string argument into argv[].  Major kluge.... */
+int parseArgs (char* line, int* argc, char** argv);
+#endif
+
+#ifdef WIN32
 extern  int     win_kludge_socket;
 #endif /* WIN32 */
 
@@ -239,7 +248,7 @@ extern  void    init_stat();
 extern  void    send_request();
 extern  void    recv_response();
 extern  void    send_response();
-extern  void    recv_request();
+extern  int     recv_request();
 extern  void    dump_request();
 extern  void    start_timer();
 extern  void    stop_timer();
@@ -249,6 +258,8 @@ extern  void    calculate_confidence();
 extern  void    retrieve_confident_values();
 extern  void    display_confidence();
 extern  char   *format_units();
+
+extern  int     hostname_to_saddr(); /* wrap up gethostbyname() etc. */
 
 extern  double  ntohd();
 extern  double  htond();
@@ -277,6 +288,12 @@ extern double confidence;
 #ifdef hpux
 #define HAVE_BCOPY
 #define HAVE_BZERO
+#endif
+
+#ifdef VXWORKS
+#define HAVE_BCOPY
+#define HAVE_BZERO
+#define HAVE_MIN
 #endif
 
 #ifndef HAVE_BCOPY

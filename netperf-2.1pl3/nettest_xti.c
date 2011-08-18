@@ -1,7 +1,7 @@
 #ifdef DO_XTI
 #ifndef lint
 char	nettest_xti_id[]="\
-@(#)nettest_xti.c (c) Copyright 1995 Hewlett-Packard Co. Version 2.1pl1";
+@(#)nettest_xti.c (c) Copyright 1995 Hewlett-Packard Co. Version 2.1pl3";
 #else
 #define DIRTY
 #define HISTOGRAM

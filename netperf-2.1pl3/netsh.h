@@ -27,8 +27,10 @@
 #define 	REM_RECV_ALIGN	4	/* alignment for remote receive	*/
 #define 	REM_SEND_ALIGN	4	/* alignment for remote sends	*/
 
-/* misc defines for the hell of it					*/
+/* misc defines for the hell of it		*/
+#ifndef MAXLONG			/* Linux already defines this */
 #define 	MAXLONG  	4294967295L
+#endif
 
 #ifndef NETSH
 /* stuff to say where this test is going                                */

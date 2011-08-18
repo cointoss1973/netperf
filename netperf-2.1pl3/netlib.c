@@ -63,7 +63,7 @@ char	netlib_id[]="\
 #include <string.h>
 
 
-#ifndef WIN32
+#if !defined(WIN32) && !defined(VXWORKS)
  /* at some point, I would like to get rid of all these "sys/" */
  /* includes where appropriate. if you have a system that requires */
  /* them, speak now, or your system may not comile later revisions of */
@@ -83,6 +83,18 @@ char	netlib_id[]="\
 #ifdef USE_LOOPER
 #include <sys/mman.h>
 #endif /* USE_LOOPER */
+
+#elif defined(VXWORKS)
+
+#include <vxWorks.h>
+#include <unistd.h>
+#include <time.h>
+#include <sys/times.h>		/* should be <sys/time.h>, but WRS botched.. */
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <hostLib.h>		/* for hostGetByName() */
+/*#include <sys/utsname.h>*/	/* currently empty file. */
+#include <version.h>		/* kluge with: <version.h> */
 
 #else /* WIN32 */
 
@@ -241,11 +253,15 @@ KERNEL_USER_TIMES   perf_end;                              /* robin */
 SYSTEM_PROCESSOR_PERFORMANCE_INFORMATION sysperf_start;    /* robin */
 SYSTEM_PROCESSOR_PERFORMANCE_INFORMATION sysperf_end;      /* robin */
 #endif /* NT_SDK */
+#else  /* WIN32 */
+#ifdef VXWORKS
+/* put VxWorks specific timing stuff in here... */
 #else
 struct	tms		times_data1, 
                         times_data2;
+#endif /* VXWORKS */
 #endif /* WIN32 */
-#endif
+#endif /* USE_PSTAT */
 
 struct	timeval		time1, time2;
 struct	timezone	tz;
@@ -264,7 +280,10 @@ int	netlib_control;
 
 int	server_sock;
 
+/* This would appear to be unitialized.  I'm not sure if that matters.
+   (pavel 4-Feb-1998) */
 int	tcp_proto_num;
+
 
  /* in the past, I was overlaying a structure on an array of ints. now */
  /* I am going to have a "real" structure, and point an array of ints */
@@ -290,23 +309,6 @@ struct strbuf control_message = {DLPI_DATA_SIZE, 0, (char *)control_data};
 
 int	times_up;
 
-#ifdef WIN32
- /* we use a getopt implementation from net.sources */
-/*
- * get option letter from argument vector
- */
-int
-	opterr = 1,		/* should error messages be printed? */
-	optind = 1,		/* index into parent argv vector */
-	optopt;			/* character checked for validity */
-char
-	*optarg;		/* argument associated with option */
-
-#define EMSG	""
-
-char *progname;			/* may also be defined elsewhere */
-
-#endif /* WIN32 */
 
 static int measuring_cpu;
 
@@ -336,7 +338,34 @@ stop_itimer()
 
 
 
-#ifdef WIN32
+#if defined(WIN32) || defined(VXWORKS)
+ /* we use a getopt implementation from net.sources */
+/*
+ * get option letter from argument vector
+ */
+int
+	opterr = 1,		/* should error messages be printed? */
+	optind = 1,		/* index into parent argv vector */
+	optopt;			/* character checked for validity */
+char
+	*optarg;		/* argument associated with option */
+
+#define EMSG	""
+static char *place = EMSG;	/* option letter processing */
+
+char *progname;			/* may also be defined elsewhere */
+
+void
+init_getopt()
+{
+    /* needed for VxWorks: "main()" might be called multiple times without
+       reloading...  */
+    opterr = 1;
+    optind = 1;
+    place = EMSG;
+}
+
+
 static void
 error(char *pch)
 {
@@ -350,7 +379,6 @@ error(char *pch)
 int
 getopt(int argc, char **argv, char *ostr)
 {
-  static char *place = EMSG;	/* option letter processing */
   register char *oli;			/* option letter list index */
   
   if (!*place) {
@@ -397,9 +425,102 @@ getopt(int argc, char **argv, char *ostr)
   }
   return optopt;			/* return option letter */
 }
-#endif /* WIN32 */
+#endif /* WIN32 || VXWORKS */
+
+#ifdef VXWORKS
+/* Helper routine to parse the arguments passed into netperf() by the
+   interactive shell and turn the single string argument into an argv[].
+   Major kluge..... */
+
+int 
+parseArgs (char* line, int* argc, char** argv)
+{
+    int count = 1;
+    char* p = NULL;
+  
+    if (line == NULL) {
+	fprintf (stderr, "parseArgs(): no argument specified\n");
+	return 0;
+    }
+ 
+    while ((p = strchr(line, ' ')) != NULL) {
+	/* deal with multiple spaces: */
+	if (*line != ' ') {
+	    *p = '\0';
+	    argv[count++] = line;
+	}
+	line = ++p;
+    }
+    argv[count++] = line;
+  
+    *argc = count;
+    return count;
+}
+#endif /* VXWORKS */
+
 
 
+
+/* I've encapsulated this recurring theme into a single routine
+   (pavel 11-Feb-1998).  Here are the original comments:  */
+
+/* it would seem that while HP-UX will allow an IP address (as a */
+/* string) in a call to gethostbyname, other, less enlightened */
+/* systems do not. fix from awjacks@ca.sandia.gov raj 10/95 */  
+/* order changed to check for IP address first. raj 7/96 */
+
+int     
+hostname_to_saddr(remote_host, saddr)
+     char* remote_host;
+     struct sockaddr_in	*saddr;
+{
+  unsigned int addr;
+  struct hostent *hp;
+
+  if ((addr = inet_addr(remote_host)) == -1) {
+    /* it was not an IP address, try it as a name */
+#ifndef VXWORKS   
+    if ((hp = gethostbyname(remote_host)) == NULL) {
+      /* we have no idea what it is */
+      fprintf(where,
+	      "establish_control: could not resolve the destination %s\n",
+	      remote_host);
+      fflush(where);
+      return(0);
+    }
+    else {
+      /* it was a valid remote_host */
+      bcopy(hp->h_addr,
+	    (char *)&saddr->sin_addr,
+	    hp->h_length);
+      saddr->sin_family = hp->h_addrtype;
+    }
+#else /* VXWORKS */
+    /* It turns out that VxWorks has no gethostbyname() routines, presumably
+       since DNS resolving doesn't mesh with Real-Time...  What they provide
+       instead is a lookup into their equiv of /etc/hosts.  So, we may as
+       well try to use that.  */
+    if ((addr =  hostGetByName (remote_host)) == NULL) {
+        /* we have no idea what it is */
+        fprintf(where,
+                "establish_control: could not resolve the destination %s\n",
+                remote_host);
+        fflush(where);
+	return(0);
+    } else {
+        /* it was a valid IP address */
+        saddr->sin_addr.s_addr = addr;
+        saddr->sin_family = AF_INET;
+    }
+#endif /* VXWORKS */
+  }
+  else {
+    /* it was a valid IP address */
+    saddr->sin_addr.s_addr = addr;
+    saddr->sin_family = AF_INET;
+  }    
+  return 1;
+}
 
 
 double
@@ -556,6 +677,17 @@ gettimeofday( struct timeval *tv , struct timezone *not_used )
 }
 #endif /* WIN32 */
 
+#ifdef VXWORKS
+void
+gettimeofday( struct timeval *tv , struct timezone *not_used )
+{
+    struct timespec tp;
+    clock_gettime (CLOCK_REALTIME, &tp);
+
+    tv->tv_sec = tp.tv_sec;
+    tv->tv_usec = tp.tv_nsec / 1000;
+}
+#endif /* VXWORKS */
      
 
 /************************************************************************/
@@ -673,9 +805,18 @@ install_signal_catchers()
   action.sa_flags = 0;
 #endif /* SA_INTERRUPT */
 
+/* The NSIGS below is a portability hazard.  POSIX does not specify NSIGS, so
+   implementations are free not to define it.  Most seem to have it (for
+   backward compat), although Solaris, for example, advises that "for binary
+   compatibility, one should use _sys_nsig instead". Insert just a minimal
+   kluge for VxWorks (pavel 7-Jan-1998) */
+#ifdef VXWORKS
+#define NSIG _NSIGS
+#endif
 
   for (i = 1; i <= NSIG; i++) {
     if (i != SIGALRM) {
+      /* Is this right?  What happened to i here? (pavel 11-Feb-1998) */
       if (sigaction(SIGALRM,&action,NULL) != 0) {
 	fprintf(where,
 		"Could not install signal catcher for sig %d, errno %d\n",
@@ -715,6 +856,40 @@ emulate_alarm( int seconds )
 }
 
 #endif /* WIN32 */
+
+#ifdef VXWORKS
+static timer_t alarm_timer = 0;
+
+void
+reset_alarm()
+{
+    if (alarm_timer != 0) {
+	timer_delete(alarm_timer);
+    }
+    alarm_timer = 0;
+}
+
+unsigned int
+alarm (unsigned sec)
+{
+    struct itimerspec ts;
+
+    if (alarm_timer == 0) {
+	if (timer_create (CLOCK_REALTIME, NULL, &alarm_timer) < 0) {
+	    fprintf (where, "timer_create() failed with errno %d", errno);
+	}
+    }
+    ts.it_value.tv_sec = sec;
+    ts.it_value.tv_nsec = 0 ;
+    ts.it_interval.tv_sec = 0;
+    ts.it_interval.tv_nsec = 0;
+    if (timer_settime (alarm_timer, 0, &ts, NULL) < 0) {
+	fprintf (where, "alarm() : timer_settime() failed with errno %d",
+		 errno);
+    }
+    return 0;			/* kluge */
+}
+#endif /* VXWORKS */
 
 void
 start_timer(time)
@@ -1246,6 +1421,8 @@ shutdown_control()
   /* we now assume that the socket has come ready for reading */
   recv(netlib_control, buf, buflen,0);
 
+  /* I think we still need a close here (???) - pavel 5-Feb-1998 */
+  close (netlib_control);
 }
 
 
@@ -1377,7 +1554,7 @@ send_response()
  /*									*/
  /***********************************************************************/
 
-void
+int
 recv_request()
 {
 int 	tot_bytes_recvd,
@@ -1431,8 +1608,20 @@ if (bytes_recvd == 0) {
     fflush(where);
   }
 
-  shutdown_control();
-  exit(0);
+  /* I think this is wrong.  You want to shut server_sock not netlib_control,
+     as shutdown_control() does. (pavel 5-Feb-1998) */
+  /* shutdown_control(); */
+
+  /* Rather than exitting, lets make recv_request() return 0.  We can then
+     handle this in process_requests() and continue looping, or else exit the
+     forked process if we're in Unix. (pavel 5-Feb-1998)*/
+  return 0;
+
+#if 0
+  /* XXX - Need to think carefully about exitting.  Should close
+     server_control and server_sock first. (pavel 5-Feb-1998) */
+  exit(0);	       	
+#endif
 }
 
 if (tot_bytes_recvd < buflen) {
@@ -1449,6 +1638,7 @@ if (tot_bytes_recvd < buflen) {
 if (debug > 1) {
   dump_request();
 }
+return 1; 
 }
 
  /***********************************************************************/
@@ -1887,34 +2077,8 @@ short int	port;
 	sizeof(server));
   server.sin_port = htons(port);
 
-  /* it would seem that while HP-UX will allow an IP address (as a */
-  /* string) in a call to gethostbyname, other, less enlightened */
-  /* systems do not. fix from awjacks@ca.sandia.gov raj 10/95 */  
-  /* order changed to check for IP address first. raj 7/96 */
-
-  if ((addr = inet_addr(hostname)) == -1) {
-    /* it was not an IP address, try it as a name */
-    if ((hp = gethostbyname(hostname)) == NULL) {
-      /* we have no idea what it is */
-      fprintf(where,
-	      "establish_control: could not resolve the destination %s\n",
-	      hostname);
-      fflush(where);
+  if (hostname_to_saddr(hostname, &server) == 0) 
       exit(1);
-    }
-    else {
-      /* it was a valid hostname */
-      bcopy(hp->h_addr,
-	    (char *)&server.sin_addr,
-	    hp->h_length);
-      server.sin_family = hp->h_addrtype;
-    }
-  }
-  else {
-    /* it was a valid IP address */
-    server.sin_addr.s_addr = addr;
-    server.sin_family = AF_INET;
-  }    
 
   if (debug > 1) {
     fprintf(where,"resolved the destination... \n");
@@ -1999,6 +2163,8 @@ char *id_string;
 SYSTEM_INFO		system_info ;
 char			system_name[MAX_COMPUTERNAME_LENGTH+1] ;
 int			name_len = MAX_COMPUTERNAME_LENGTH + 1 ;
+#elif defined(VXWORKS)
+char			system_name[128];
 #else
 struct	utsname		system_name;
 #endif /* WIN32 */
@@ -2008,14 +2174,18 @@ GetSystemInfo( &system_info ) ;
 if ( !GetComputerName(system_name , &name_len) )
 	strcpy(system_name , "no_name") ;
 #else
+#ifdef VXWORKS
+/* XXXX - fill in something here to get nodename, release level... */
+#else
 if (uname(&system_name) <0) {
 	perror("identify_local: uname");
 	exit(1);
 }
+#endif /* VXWORKS */
 #endif /* WIN32 */
 
 sprintf(id_string,
-#ifdef WIN32
+#if defined(WIN32)
 	"%-15s%-15s%d.%d%-15s",
 	"Windows NT",
 	system_name ,
@@ -2023,6 +2193,12 @@ sprintf(id_string,
 	GetVersion() & 0xFF00 ,
 	system_info.dwProcessorType ) ;
 	
+#elif defined(VXWORKS)
+	"%-15s%-15s%-15s%-15s",
+        "VxWorks",
+	"unknown nodename",
+	vxWorksVersion,
+        "unknown CPU type");
 #else
 	"%-15s%-15s%-15s%-15s%-15s",
 	system_name.sysname,
@@ -2200,8 +2376,14 @@ cpu_start(measure_cpu)
                                                                 /* robin */
 #endif /* NT_SDK */
 #else
+#ifdef VXWORKS
+    /* For the moment, punt on this.  I'm sure there must be some sort of
+       resource measurement API in VxWorks, but I don't yet know what it
+       is...  (pavel 7-Jan-1998) */
+#else
     cpu_method = TIMES;
     times(&times_data1);
+#endif /* VXWORKS */
 #endif /* WIN32 */
 #endif /* USE_PSTAT */
 #endif /* USE_LOOPER */
@@ -2316,8 +2498,13 @@ if (measure_cpu) {
        }                                                        /* robin */
                                                                 /* robin */
 #endif /* NT_SDK */
+#ifdef VXWORKS
+    /* For the moment, punt on this.  I'm sure there must be some sort of
+       resource measurement API in VxWorks, but I don't yet know what it
+       is...  (pavel 7-Jan-1998) */
 #else
   times(&times_data2);
+#endif /* VXWORKS */
 #endif /* WIN32 */
 #endif /* USE_PSTAT */
 #endif /* USE_LOOPER */
@@ -2601,6 +2788,10 @@ calc_cpu_util(elapsed_time)
   }                                                             /* robin */
                                                                 /* robin */
 #endif /* NT_SDK */
+#ifdef VXWORKS
+    /* For the moment, punt on this.  I'm sure there must be some sort of
+       resource measurement API in VxWorks, but I don't yet know what it
+       is...  (pavel 7-Jan-1998) */
 #else
   /* we had no kernel idle counter, so use what we can */
   ticks_sec = sysconf(_SC_CLK_TCK);
@@ -2619,6 +2810,7 @@ calc_cpu_util(elapsed_time)
 				 (double) ticks_sec /
 				 (double) lib_elapsed) *
 				(double) 100.0);
+#endif /* VXWORKS */
 #endif /* WIN32 */
 #endif /* USE_PSTAT */
 #endif /* USE_LOOPER */
@@ -2792,7 +2984,12 @@ sit_and_spin(child_index)
     fprintf(where,
 	    "Looper child %d is born, pid %d\n",
 	    child_index,
+#ifdef VXWORKS
+	    999);
+    /* Is it worth calling taskIdCurrent() here? (pavel 11-Feb-1998) */
+#else
 	    getpid());
+#endif
     fflush(where);
   }
   
@@ -2910,12 +3107,14 @@ start_looper_processes()
     exit(1);
   }
   
+#ifndef VXWORKS
   if (chmod("/tmp/netperf_cpu",0644) == -1) {
     fprintf(where,"create_looper: chmod; errno %d\n",errno);
     fflush(where);
     exit(1);
   }
-  
+#endif /* VXWORKS */
+
   /* with the file descriptor in place, lets be sure that the file is */
   /* large enough. */
   
@@ -3099,6 +3298,23 @@ calibrate_remote_cpu()
   }	
 }
 
+#if 0	/* sleep function provided by vxworks */
+#ifdef VXWORKS
+/* supply a sleep routine for VxWorks */
+int
+sleep (secs)
+unsigned secs;
+{
+    struct timespec rqst;
+    rqst.tv_sec = secs;
+    rqst.tv_nsec = 0;
+
+    nanosleep (&rqst, NULL);
+    return 0;
+}
+#endif /* VXWORKS */
+#endif
+
 int
 msec_sleep( msecs )
      int msecs;

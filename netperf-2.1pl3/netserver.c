@@ -43,7 +43,7 @@
  
 */
 char	netserver_id[]="\
-@(#)netserver.c (c) Copyright 1993, 1994 Hewlett-Packard Co. Version 2.1pl1";
+@(#)netserver.c (c) Copyright 1993, 1994 Hewlett-Packard Co. Version 2.1pl3";
 
  /***********************************************************************/
  /*									*/
@@ -67,14 +67,19 @@ char	netserver_id[]="\
 #include <stdio.h>
 #include <errno.h>
 #include <signal.h>
-#ifndef WIN32
+#if !defined(WIN32) && !defined(VXWORKS)
 #include <sys/ipc.h>
-#endif /* WIN32 */
+#endif /* WIN32 || VXWORKS */
 #include <fcntl.h>
-#ifdef WIN32
+#if defined(WIN32)
 #include <time.h>
 #include <windows.h>
 #include <winsock.h>
+#elif defined(VXWORKS)
+#include <sys/times.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <unistd.h>
 #else
 #include <sys/time.h>
 #include <sys/ioctl.h>
@@ -86,7 +91,7 @@ char	netserver_id[]="\
 #ifndef DONT_WAIT
 #include <sys/wait.h>
 #endif /* DONT_WAIT */
-#endif /* WIN32 */
+#endif /* WIN32 || VXWORKS */
 #include <string.h>
 #include <stdlib.h>
 
@@ -133,7 +138,10 @@ process_requests()
   
   
   while (1) {
-    recv_request();
+
+    if (recv_request() == 0)
+	return;
+
     if (debug)
       dump_request();
     
@@ -397,7 +405,7 @@ void set_up_server()
     setpgrp();
     */
 
-#ifndef WIN32
+#if !defined(WIN32) && !defined(VXWORKS)
   switch (fork())
     {
     case -1:  	
@@ -422,7 +430,7 @@ void set_up_server()
 
       signal(SIGCLD, SIG_IGN);
       
-#endif /* WIN32 */
+#endif /* WIN32 || VXWORKS*/
 
       for (;;)
 	{
@@ -434,13 +442,14 @@ void set_up_server()
 	      printf("server_control: accept failed\n");
 	      exit(1);
 	    }
-#ifdef WIN32
+#if defined(WIN32) || defined(VXWORKS)
 	/*
 	 * Since we cannot fork this process , we cant fire any threads
 	 * as they all share the same global data . So we better allow
 	 * one request at at time 
 	 */
 	    process_requests() ;
+	    close (server_sock); /* pavel 5-Feb-1998 */
 	}
 #else
 
@@ -478,9 +487,42 @@ void set_up_server()
       exit (0);
       
     }
-#endif /* WIN32 */  
+#endif /* WIN32 || VXWORKS*/
 }
 
+
+#ifdef VXWORKS
+/* VxWorks uses a single address space for all tasks and dynamically loads
+   object modules.  Hence, we don't want a main(), but instead a netperf()...
+ */
+int
+netserver(line)
+char* line;
+{
+    int	 argc;
+    char *argv[100];
+    extern int optind;
+
+    int	c;
+
+    struct sockaddr name;
+    int namelen = sizeof(name);
+
+    argv[0] = "netserver";
+    parseArgs (line, &argc, argv);
+    init_getopt();		/* klugey, but needed.  (We may call
+				   netperf()/getopt() multiple times before
+				   rebooting/reloading...  */
+
+    /* Because VxWorks tasks run in the same address space, we can't count on
+       the static variables being init-ed to 0 automatically... */
+    zero_static_vars();
+
+    /* Similarly, we should reset the posix timer variable, since we may not
+       be in the same task that initially created it. */
+    reset_alarm();
+
+#else  /* VXWORKS */
 
 int
 main(argc, argv)
@@ -492,7 +534,8 @@ char *argv[];
 
   struct sockaddr name;
   int namelen = sizeof(name);
-  
+
+#endif /* VXWORKS */
 
 #ifdef WIN32
 	WSADATA	wsa_data ;
@@ -547,7 +590,9 @@ char *argv[];
     exit(1);
   }
   
+#ifndef VXWORKS
   chmod(DEBUG_LOG_FILE,0644);
+#endif
   
   /* if we were given a port number, then we should open a */
   /* socket and hang listens off of it. otherwise, we should go */

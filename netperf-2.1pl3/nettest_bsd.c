@@ -49,19 +49,24 @@ char	nettest_id[]="\
 #include <stdlib.h>
 #endif /* NOSTDLIBH */
 
-#ifndef WIN32
+#if !defined(WIN32) && !defined(VXWORKS)
 #include <sys/ipc.h>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <netdb.h>
-#else /* WIN32 */
+#elif defined(VXWORKS)
+#include <unistd.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#else /* WIN32 || VXWORKS */
 #include <process.h>
 #include <windows.h>
 #include <winsock.h>
 #define close(x)	closesocket(x)
-#endif /* WIN32 */
+#endif /* WIN32 || VXWORKS */
 
 #include "netlib.h"
 #include "netsh.h"
@@ -112,6 +117,33 @@ static HIST time_hist;
 #endif /* HISTOGRAM */
 
 
+#ifdef VXWORKS
+  /* Because VxWorks tasks run in the same address space, we can't count on
+     the static variables being init-ed to 0 automatically... */
+void zero_static_vars()
+{
+    rss_size = 0;
+    rsr_size = 0;
+    lss_size = 0;	
+    lsr_size = 0;	
+    req_size = 1;
+    rsp_size = 1;
+    send_size = 0;	
+    recv_size = 0;	
+		
+    loc_nodelay = 0;	
+    rem_nodelay = 0;
+    loc_sndavoid = 0;	
+    loc_rcvavoid = 0;	
+    rem_sndavoid = 0;	
+    rem_rcvavoid = 0;	
+
+    send_width = 0;
+    recv_width = 0;
+}
+#endif /* VXWORKS */
+
+
 char sockets_usage[] = "\n\
 Usage: netperf [global options] -- [test options] \n\
 \n\
@@ -153,7 +185,11 @@ get_tcp_info(socket, mss)
 
   sock_opt_len = sizeof(int);
   if (getsockopt(socket,
-		 getprotobyname("tcp")->p_proto,	
+#ifdef VXWORKS
+		 IPPROTO_TCP,
+#else
+		 getprotobyname("tcp")->p_proto,
+#endif
 		 TCP_MAXSEG,
 		 (char *)mss,
 		 &sock_opt_len) < 0) {
@@ -350,7 +386,11 @@ create_data_socket(family, type)
   if (loc_nodelay) {
     one = 1;
     if(setsockopt(temp_socket,
+#ifdef VXWORKS
+		  IPPROTO_TCP,
+#else
 		  getprotobyname("tcp")->p_proto,
+#endif
 		  TCP_NODELAY,
 		  (char *)&one,
 		  sizeof(one)) < 0) {
@@ -483,7 +523,11 @@ int temp_socket;
   if (loc_nodelay) {
     one = 1;
     if(setsockopt(temp_socket,
+#ifdef VXWORKS
+		  IPPROTO_TCP,
+#else
 		  getprotobyname("tcp")->p_proto,
+#endif
 		  TCP_NODELAY,
 		  (char *)&one,
 		  sizeof(one)) < 0) {
@@ -628,34 +672,8 @@ Size (bytes)\n\
   bzero((char *)&server,
 	sizeof(server));
   
-  /* it would seem that while HP-UX will allow an IP address (as a */
-  /* string) in a call to gethostbyname, other, less enlightened */
-  /* systems do not. fix from awjacks@ca.sandia.gov raj 10/95 */  
-  /* order changed to check for IP address first. raj 7/96 */
-
-  if ((addr = inet_addr(remote_host)) == -1) {
-    /* it was not an IP address, try it as a name */
-    if ((hp = gethostbyname(remote_host)) == NULL) {
-      /* we have no idea what it is */
-      fprintf(where,
-	      "establish_control: could not resolve the destination %s\n",
-	      remote_host);
-      fflush(where);
+  if (hostname_to_saddr(remote_host, &server) == 0) 
       exit(1);
-    }
-    else {
-      /* it was a valid remote_host */
-      bcopy(hp->h_addr,
-	    (char *)&server.sin_addr,
-	    hp->h_length);
-      server.sin_family = hp->h_addrtype;
-    }
-  }
-  else {
-    /* it was a valid IP address */
-    server.sin_addr.s_addr = addr;
-    server.sin_family = AF_INET;
-  }    
   
   
   if ( print_headers ) {
@@ -906,7 +924,7 @@ Size (bytes)\n\
     /* get the signal set for the call to sigsuspend */
     if (sigprocmask(SIG_BLOCK, (sigset_t *)NULL, &signal_set) != 0) {
       fprintf(where,
-	      "send_udp_stream: unable to get sigmask errno %d\n",
+	      "send_tcp_stream: unable to get sigmask errno %d\n",
 	      errno);
       fflush(where);
       exit(1);
@@ -992,7 +1010,7 @@ Size (bytes)\n\
 	}
 	if (sigsuspend(&signal_set) == EFAULT) {
 	  fprintf(where,
-		  "send_udp_stream: fault with sigsuspend.\n");
+		  "send_tcp_stream: fault with sigsuspend.\n");
 	  fflush(where);
 	  exit(1);
 	}
@@ -1498,7 +1516,12 @@ recv_tcp_stream()
   tcp_stream_response->receive_size = recv_size;
 
   send_response();
-  
+  /* Because send_response() will htonl() all the bits in the
+     netperf_response struct, we actually need to set this field
+     again... (pavel 11-Feb-1998)  */
+  netperf_response.content.response_type = TCP_STREAM_RESPONSE;
+
+
   addrlen = sizeof(peeraddr_in);
   
   if ((s_data=accept(s_listen,
@@ -1733,34 +1756,8 @@ Send   Recv    Send   Recv\n\
   bzero((char *)&server,
 	sizeof(server));
   
-  /* it would seem that while HP-UX will allow an IP address (as a */
-  /* string) in a call to gethostbyname, other, less enlightened */
-  /* systems do not. fix from awjacks@ca.sandia.gov raj 10/95 */  
-  /* order changed to check for IP address first. raj 7/96 */
-
-  if ((addr = inet_addr(remote_host)) == -1) {
-    /* it was not an IP address, try it as a name */
-    if ((hp = gethostbyname(remote_host)) == NULL) {
-      /* we have no idea what it is */
-      fprintf(where,
-	      "establish_control: could not resolve the destination %s\n",
-	      remote_host);
-      fflush(where);
+  if (hostname_to_saddr(remote_host, &server) == 0) 
       exit(1);
-    }
-    else {
-      /* it was a valid remote_host */
-      bcopy(hp->h_addr,
-	    (char *)&server.sin_addr,
-	    hp->h_length);
-      server.sin_family = hp->h_addrtype;
-    }
-  }
-  else {
-    /* it was a valid IP address */
-    server.sin_addr.s_addr = addr;
-    server.sin_family = AF_INET;
-  }    
   
   if ( print_headers ) {
     fprintf(where,"TCP REQUEST/RESPONSE TEST");
@@ -2436,34 +2433,8 @@ bytes   bytes    secs            #      #   %s/sec %% %c%c     us/KB\n\n";
   bzero((char *)&server,
 	sizeof(server));
   
-  /* it would seem that while HP-UX will allow an IP address (as a */
-  /* string) in a call to gethostbyname, other, less enlightened */
-  /* systems do not. fix from awjacks@ca.sandia.gov raj 10/95 */  
-  /* order changed to check for IP address first. raj 7/96 */
-
-  if ((addr = inet_addr(remote_host)) == -1) {
-    /* it was not an IP address, try it as a name */
-    if ((hp = gethostbyname(remote_host)) == NULL) {
-      /* we have no idea what it is */
-      fprintf(where,
-	      "establish_control: could not resolve the destination %s\n",
-	      remote_host);
-      fflush(where);
+  if (hostname_to_saddr(remote_host, &server) == 0) 
       exit(1);
-    }
-    else {
-      /* it was a valid remote_host */
-      bcopy(hp->h_addr,
-	    (char *)&server.sin_addr,
-	    hp->h_length);
-      server.sin_family = hp->h_addrtype;
-    }
-  }
-  else {
-    /* it was a valid IP address */
-    server.sin_addr.s_addr = addr;
-    server.sin_family = AF_INET;
-  }    
 
   
   if ( print_headers ) {
@@ -3360,34 +3331,8 @@ bytes  bytes  bytes   bytes  secs.   per sec  %% %c    %% %c    us/Tr   us/Tr\n\
   bzero((char *)&server,
 	sizeof(server));
   
-  /* it would seem that while HP-UX will allow an IP address (as a */
-  /* string) in a call to gethostbyname, other, less enlightened */
-  /* systems do not. fix from awjacks@ca.sandia.gov raj 10/95 */  
-  /* order changed to check for IP address first. raj 7/96 */
-
-  if ((addr = inet_addr(remote_host)) == -1) {
-    /* it was not an IP address, try it as a name */
-    if ((hp = gethostbyname(remote_host)) == NULL) {
-      /* we have no idea what it is */
-      fprintf(where,
-	      "establish_control: could not resolve the destination %s\n",
-	      remote_host);
-      fflush(where);
+  if (hostname_to_saddr(remote_host, &server) == 0) 
       exit(1);
-    }
-    else {
-      /* it was a valid remote_host */
-      bcopy(hp->h_addr,
-	    (char *)&server.sin_addr,
-	    hp->h_length);
-      server.sin_family = hp->h_addrtype;
-    }
-  }
-  else {
-    /* it was a valid IP address */
-    server.sin_addr.s_addr = addr;
-    server.sin_family = AF_INET;
-  }    
   
   if ( print_headers ) {
     fprintf(where,"UDP REQUEST/RESPONSE TEST");
@@ -4813,34 +4758,8 @@ Send   Recv    Send   Recv\n\
 	sizeof(struct sockaddr_in));
   myaddr->sin_family = AF_INET;
 
-  /* it would seem that while HP-UX will allow an IP address (as a */
-  /* string) in a call to gethostbyname, other, less enlightened */
-  /* systems do not. fix from awjacks@ca.sandia.gov raj 10/95 */  
-  /* order changed to check for IP address first. raj 7/96 */
-
-  if ((addr = inet_addr(remote_host)) == -1) {
-    /* it was not an IP address, try it as a name */
-    if ((hp = gethostbyname(remote_host)) == NULL) {
-      /* we have no idea what it is */
-      fprintf(where,
-	      "establish_control: could not resolve the destination %s\n",
-	      remote_host);
-      fflush(where);
+  if (hostname_to_saddr(remote_host, &server) == 0) 
       exit(1);
-    }
-    else {
-      /* it was a valid remote_host */
-      bcopy(hp->h_addr,
-	    (char *)&server.sin_addr,
-	    hp->h_length);
-      server.sin_family = hp->h_addrtype;
-    }
-  }
-  else {
-    /* it was a valid IP address */
-    server.sin_addr.s_addr = addr;
-    server.sin_family = AF_INET;
-  }    
   
   
   if ( print_headers ) {
@@ -4983,7 +4902,9 @@ Send   Recv    Send   Recv\n\
   
   /* pick a nice random spot between client_port_min and */
   /* client_port_max for our initial port number */
+#ifndef VXWORKS
   srand(getpid());
+#endif
   if (client_port_max - client_port_min) {
     myport = client_port_min + 
       (rand() % (client_port_max - client_port_min));
@@ -5932,34 +5853,8 @@ Send   Recv    Send   Recv\n\
 	sizeof(struct sockaddr_in));
   myaddr->sin_family = AF_INET;
 
-  /* it would seem that while HP-UX will allow an IP address (as a */
-  /* string) in a call to gethostbyname, other, less enlightened */
-  /* systems do not. fix from awjacks@ca.sandia.gov raj 10/95 */  
-  /* order changed to check for IP address first. raj 7/96 */
-
-  if ((addr = inet_addr(remote_host)) == -1) {
-    /* it was not an IP address, try it as a name */
-    if ((hp = gethostbyname(remote_host)) == NULL) {
-      /* we have no idea what it is */
-      fprintf(where,
-	      "establish_control: could not resolve the destination %s\n",
-	      remote_host);
-      fflush(where);
+  if (hostname_to_saddr(remote_host, &server) == 0) 
       exit(1);
-    }
-    else {
-      /* it was a valid remote_host */
-      bcopy(hp->h_addr,
-	    (char *)&server.sin_addr,
-	    hp->h_length);
-      server.sin_family = hp->h_addrtype;
-    }
-  }
-  else {
-    /* it was a valid IP address */
-    server.sin_addr.s_addr = addr;
-    server.sin_family = AF_INET;
-  }    
   
   if ( print_headers ) {
     fprintf(where,"TCP Transactional/Request/Response TEST");
@@ -6103,7 +5998,9 @@ Send   Recv    Send   Recv\n\
   /* client_port_max for our initial port number. if they are the */
   /* same, then just set to _min */
   if (client_port_max - client_port_min) {
+#ifndef VXWORKS
     srand(getpid());
+#endif
     myport = client_port_min + 
       (rand() % (client_port_max - client_port_min));
   }
@@ -7021,34 +6918,8 @@ Send   Recv    Send   Recv\n\
   bzero((char *)&server,
 	sizeof(server));
   
-  /* it would seem that while HP-UX will allow an IP address (as a */
-  /* string) in a call to gethostbyname, other, less enlightened */
-  /* systems do not. fix from awjacks@ca.sandia.gov raj 10/95 */  
-  /* order changed to check for IP address first. raj 7/96 */
-
-  if ((addr = inet_addr(remote_host)) == -1) {
-    /* it was not an IP address, try it as a name */
-    if ((hp = gethostbyname(remote_host)) == NULL) {
-      /* we have no idea what it is */
-      fprintf(where,
-	      "establish_control: could not resolve the destination %s\n",
-	      remote_host);
-      fflush(where);
+  if (hostname_to_saddr(remote_host, &server) == 0) 
       exit(1);
-    }
-    else {
-      /* it was a valid remote_host */
-      bcopy(hp->h_addr,
-	    (char *)&server.sin_addr,
-	    hp->h_length);
-      server.sin_family = hp->h_addrtype;
-    }
-  }
-  else {
-    /* it was a valid IP address */
-    server.sin_addr.s_addr = addr;
-    server.sin_family = AF_INET;
-  }    
   
   if ( print_headers ) {
     fprintf(where,"TCP Non-Blocking REQUEST/RESPONSE TEST");
@@ -8116,34 +7987,8 @@ Send   Recv    Send   Recv\n\
 	sizeof(struct sockaddr_in));
   myaddr->sin_family = AF_INET;
 
-  /* it would seem that while HP-UX will allow an IP address (as a */
-  /* string) in a call to gethostbyname, other, less enlightened */
-  /* systems do not. fix from awjacks@ca.sandia.gov raj 10/95 */  
-  /* order changed to check for IP address first. raj 7/96 */
-
-  if ((addr = inet_addr(remote_host)) == -1) {
-    /* it was not an IP address, try it as a name */
-    if ((hp = gethostbyname(remote_host)) == NULL) {
-      /* we have no idea what it is */
-      fprintf(where,
-	      "establish_control: could not resolve the destination %s\n",
-	      remote_host);
-      fflush(where);
+  if (hostname_to_saddr(remote_host, &server) == 0) 
       exit(1);
-    }
-    else {
-      /* it was a valid remote_host */
-      bcopy(hp->h_addr,
-	    (char *)&server.sin_addr,
-	    hp->h_length);
-      server.sin_family = hp->h_addrtype;
-    }
-  }
-  else {
-    /* it was a valid IP address */
-    server.sin_addr.s_addr = addr;
-    server.sin_family = AF_INET;
-  }    
   
   
   if ( print_headers ) {
@@ -8274,7 +8119,9 @@ Send   Recv    Send   Recv\n\
   
   /* pick a nice random spot between client_port_min and */
   /* client_port_max for our initial port number */
-  srand(getpid());
+#ifndef VXWORKS
+    srand(getpid());
+#endif
   if (client_port_max - client_port_min) {
     myport = client_port_min + 
       (rand() % (client_port_max - client_port_min));
