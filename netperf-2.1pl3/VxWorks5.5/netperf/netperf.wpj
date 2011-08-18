@@ -1,0 +1,366 @@
+Document file - DO NOT EDIT
+
+<BEGIN> BUILD_PPC603gnu_BUILDRULE
+netperf.out
+<END>
+
+<BEGIN> BUILD_PPC603gnu_MACRO_AR
+arppc
+<END>
+
+<BEGIN> BUILD_PPC603gnu_MACRO_ARCHIVE
+$(PRJ_DIR)/PPC603gnu/netperf.a
+<END>
+
+<BEGIN> BUILD_PPC603gnu_MACRO_AS
+ccppc
+<END>
+
+<BEGIN> BUILD_PPC603gnu_MACRO_CC
+ccppc
+<END>
+
+<BEGIN> BUILD_PPC603gnu_MACRO_CC_ARCH_SPEC
+-mcpu=603 -mstrict-align
+<END>
+
+<BEGIN> BUILD_PPC603gnu_MACRO_CFLAGS
+-g \
+	-mcpu=603 \
+	-mstrict-align \
+	-ansi \
+	-fno-builtin \
+	-I. \
+	-I$(WIND_BASE)/target/h/ \
+	-DCPU=PPC603 \
+	-DTOOL_FAMILY=gnu \
+	-DTOOL=gnu \
+	-DVXWORKS \
+	-mlongcall
+<END>
+
+<BEGIN> BUILD_PPC603gnu_MACRO_CFLAGS_AS
+-g \
+	-mcpu=603 \
+	-mstrict-align \
+	-ansi \
+	-fno-builtin \
+	-P \
+	-xassembler-with-cpp \
+	-I. \
+	-I$(WIND_BASE)/target/h/ \
+	-DCPU=PPC603 \
+	-DTOOL_FAMILY=gnu \
+	-DTOOL=gnu
+<END>
+
+<BEGIN> BUILD_PPC603gnu_MACRO_CPP
+ccppc -E -P
+<END>
+
+<BEGIN> BUILD_PPC603gnu_MACRO_HEX_FLAGS
+
+<END>
+
+<BEGIN> BUILD_PPC603gnu_MACRO_LD
+ldppc
+<END>
+
+<BEGIN> BUILD_PPC603gnu_MACRO_LDDEPS
+
+<END>
+
+<BEGIN> BUILD_PPC603gnu_MACRO_LDFLAGS
+-X -N
+<END>
+
+<BEGIN> BUILD_PPC603gnu_MACRO_LD_PARTIAL
+ccppc -r -nostdlib -Wl,-X
+<END>
+
+<BEGIN> BUILD_PPC603gnu_MACRO_LD_PARTIAL_FLAGS
+-X -r
+<END>
+
+<BEGIN> BUILD_PPC603gnu_MACRO_NM
+nmppc
+<END>
+
+<BEGIN> BUILD_PPC603gnu_MACRO_OPTION_DEFINE_MACRO
+-D
+<END>
+
+<BEGIN> BUILD_PPC603gnu_MACRO_OPTION_DEPEND
+-M -w
+<END>
+
+<BEGIN> BUILD_PPC603gnu_MACRO_OPTION_GENERATE_DEPENDENCY_FILE
+-MD
+<END>
+
+<BEGIN> BUILD_PPC603gnu_MACRO_OPTION_INCLUDE_DIR
+-I
+<END>
+
+<BEGIN> BUILD_PPC603gnu_MACRO_OPTION_LANG_C
+-xc
+<END>
+
+<BEGIN> BUILD_PPC603gnu_MACRO_OPTION_UNDEFINE_MACRO
+-U
+<END>
+
+<BEGIN> BUILD_PPC603gnu_MACRO_POST_BUILD_RULE
+
+<END>
+
+<BEGIN> BUILD_PPC603gnu_MACRO_PRJ_LIBS
+
+<END>
+
+<BEGIN> BUILD_PPC603gnu_MACRO_SIZE
+sizeppc
+<END>
+
+<BEGIN> BUILD_PPC603gnu_MACRO_TOOL_FAMILY
+gnu
+<END>
+
+<BEGIN> BUILD_PPC603gnu_RO_DEPEND_PATH
+{$(WIND_BASE)/target/h/} \
+	{$(WIND_BASE)/target/src/} \
+	{$(WIND_BASE)/target/config/}
+<END>
+
+<BEGIN> BUILD_PPC603gnu_TC
+::tc_PPC603gnu
+<END>
+
+<BEGIN> BUILD_RULE_archive
+
+<END>
+
+<BEGIN> BUILD_RULE_netperf.out
+
+<END>
+
+<BEGIN> BUILD_RULE_netperf.pl
+
+<END>
+
+<BEGIN> BUILD_RULE_objects
+
+<END>
+
+<BEGIN> BUILD__CURRENT
+PPC603gnu
+<END>
+
+<BEGIN> BUILD__LIST
+PPC603gnu
+<END>
+
+<BEGIN> CORE_INFO_TYPE
+::prj_vxApp
+<END>
+
+<BEGIN> CORE_INFO_VERSION
+2.2
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/netlib.c_dependDone
+TRUE
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/netlib.c_dependencies
+$(WIND_BASE)/host/$(WIND_HOST_TYPE)/lib/gcc-lib/powerpc-wrs-vxworks/gcc-2.96/include/stddef.h \
+	$(WIND_BASE)/host/$(WIND_HOST_TYPE)/lib/gcc-lib/powerpc-wrs-vxworks/gcc-2.96/include/stdarg.h \
+	$(WIND_BASE)/host/$(WIND_HOST_TYPE)/lib/gcc-lib/powerpc-wrs-vxworks/gcc-2.96/include/va-ppc.h \
+	C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/netlib.h \
+	C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/netsh.h
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/netlib.c_objects
+netlib.o
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/netlib.c_tool
+C/C++ compiler
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/netperf.c_dependDone
+TRUE
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/netperf.c_dependencies
+$(WIND_BASE)/host/$(WIND_HOST_TYPE)/lib/gcc-lib/powerpc-wrs-vxworks/gcc-2.96/include/stddef.h \
+	$(WIND_BASE)/host/$(WIND_HOST_TYPE)/lib/gcc-lib/powerpc-wrs-vxworks/gcc-2.96/include/stdarg.h \
+	$(WIND_BASE)/host/$(WIND_HOST_TYPE)/lib/gcc-lib/powerpc-wrs-vxworks/gcc-2.96/include/va-ppc.h \
+	C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/netsh.h \
+	C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/netlib.h \
+	C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/nettest_bsd.h
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/netperf.c_objects
+netperf.o
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/netperf.c_tool
+C/C++ compiler
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/netsh.c_dependDone
+TRUE
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/netsh.c_dependencies
+$(WIND_BASE)/host/$(WIND_HOST_TYPE)/lib/gcc-lib/powerpc-wrs-vxworks/gcc-2.96/include/stddef.h \
+	$(WIND_BASE)/host/$(WIND_HOST_TYPE)/lib/gcc-lib/powerpc-wrs-vxworks/gcc-2.96/include/stdarg.h \
+	$(WIND_BASE)/host/$(WIND_HOST_TYPE)/lib/gcc-lib/powerpc-wrs-vxworks/gcc-2.96/include/va-ppc.h \
+	C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/netsh.h \
+	C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/netlib.h \
+	C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/nettest_bsd.h
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/netsh.c_objects
+netsh.o
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/netsh.c_tool
+C/C++ compiler
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/nettest_bsd.c_dependDone
+TRUE
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/nettest_bsd.c_dependencies
+$(WIND_BASE)/host/$(WIND_HOST_TYPE)/lib/gcc-lib/powerpc-wrs-vxworks/gcc-2.96/include/stddef.h \
+	$(WIND_BASE)/host/$(WIND_HOST_TYPE)/lib/gcc-lib/powerpc-wrs-vxworks/gcc-2.96/include/stdarg.h \
+	$(WIND_BASE)/host/$(WIND_HOST_TYPE)/lib/gcc-lib/powerpc-wrs-vxworks/gcc-2.96/include/va-ppc.h \
+	C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/netlib.h \
+	C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/netsh.h \
+	C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/nettest_bsd.h
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/nettest_bsd.c_objects
+nettest_bsd.o
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/nettest_bsd.c_tool
+C/C++ compiler
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/nettest_dlpi.c_dependDone
+TRUE
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/nettest_dlpi.c_dependencies
+
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/nettest_dlpi.c_objects
+nettest_dlpi.o
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/nettest_dlpi.c_tool
+C/C++ compiler
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/nettest_fore.c_dependDone
+TRUE
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/nettest_fore.c_dependencies
+
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/nettest_fore.c_objects
+nettest_fore.o
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/nettest_fore.c_tool
+C/C++ compiler
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/nettest_hippi.c_dependDone
+TRUE
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/nettest_hippi.c_dependencies
+
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/nettest_hippi.c_objects
+nettest_hippi.o
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/nettest_hippi.c_tool
+C/C++ compiler
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/nettest_ipv6.c_dependDone
+TRUE
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/nettest_ipv6.c_dependencies
+
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/nettest_ipv6.c_objects
+nettest_ipv6.o
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/nettest_ipv6.c_tool
+C/C++ compiler
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/nettest_unix.c_dependDone
+TRUE
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/nettest_unix.c_dependencies
+
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/nettest_unix.c_objects
+nettest_unix.o
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/nettest_unix.c_tool
+C/C++ compiler
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/nettest_xti.c_dependDone
+TRUE
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/nettest_xti.c_dependencies
+
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/nettest_xti.c_objects
+nettest_xti.o
+<END>
+
+<BEGIN> FILE_C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/nettest_xti.c_tool
+C/C++ compiler
+<END>
+
+<BEGIN> PROJECT_FILES
+C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/netlib.c \
+	C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/netperf.c \
+	C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/netsh.c \
+	C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/nettest_bsd.c \
+	C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/nettest_dlpi.c \
+	C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/nettest_fore.c \
+	C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/nettest_hippi.c \
+	C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/nettest_ipv6.c \
+	C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/nettest_unix.c \
+	C:/Cygwin/home/bmuser/workspace/tool/netperf/netperf-2.1pl3/nettest_xti.c
+<END>
+
+<BEGIN> userComments
+<Enter description here>
+<END>
+
