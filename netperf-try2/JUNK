@@ -1,3 +1,0 @@
-server_sock   - control sock in server - closed in setup_server loop
-netlib_control - control sock in client - closed in shutdown_control()
-server_control - listen sock in server - ** needs to be closed **
